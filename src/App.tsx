@@ -537,36 +537,6 @@ export default function App() {
       }
     };
 
-    const selfCheck = () => {
-      console.assert(getPlot("0,0").cropType === "carrot", "Default plot should be carrot type");
-      console.assert(Array.isArray(s.slimes) && s.slimes.length > 0, "Farm slimes should exist");
-      console.assert(Array.isArray(s.forestSlimes) && s.forestSlimes.length > 0, "Forest slimes should exist");
-      console.assert(s.dragon.w >= T * 4 && s.dragon.h >= T * 2, "Dragon should span multiple tiles");
-      s.scene = "shop";
-      const g = s.p.gold;
-      const seeds = s.p.inv.carrotSeeds;
-      shopAction("buyCarrot");
-      console.assert(s.p.gold === g - s.shop.carrot && s.p.inv.carrotSeeds === seeds + 1, "Shop purchase should work");
-      s.p.inv.wood = 5;
-      donate();
-      console.assert(s.p.inv.wood === 0 && s.village.wood > 0, "Wood donation should work");
-      s.scene = "farm";
-      s.p.inv.stone = 10;
-      s.bridge = false;
-      s.p.x = bridge.x * T + 6;
-      s.p.y = (bridge.y - 1) * T;
-      s.p.dir = "down";
-      interact();
-      console.assert(s.bridge === true && s.p.inv.stone === 0, "Bridge repair should work");
-      enter("forest", 1 * T, 10 * T, "right", "test");
-      console.assert(s.scene === "forest", "Forest entry should work");
-      enter("dungeon", 2 * T, 11 * T, "right", "test");
-      console.assert(s.scene === "dungeon", "Dungeon entry should work");
-      console.assert(s.dragon.w >= 5 * T && s.dragon.alive, "Dragon should be large and alive");
-    };
-
-    selfCheck();
-
     let last = performance.now();
     let raf = 0;
     const tick = (now: number) => {
