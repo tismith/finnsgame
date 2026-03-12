@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 type Crop = "carrot" | "pumpkin";
 type Scene = "farm" | "shop" | "forest" | "dungeon";
