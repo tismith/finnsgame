@@ -7,6 +7,7 @@ type Node = { x: number; y: number; hp: number; maxHp: number };
 type Enemy = { x: number; y: number; w: number; h: number; vx: number; vy: number; alive: boolean };
 type Dragon = Enemy & { hp: number; maxHp: number };
 type Plot = { tilled: boolean; watered: boolean; planted: boolean; cropType: Crop; growth: number; ready: boolean };
+type NPC = { id: string; scene: Scene; name: string; x: number; y: number; w: number; h: number; hat: string; body: string; lines: string[] };
 
 type State = {
   bridge: boolean;
@@ -35,6 +36,7 @@ type State = {
   dragon: Dragon;
   shop: { carrot: number; pumpkin: number };
   village: { wood: number; goal: number; level: number };
+  npcTalk: Record<string, number>;
 };
 
 export default function App() {
@@ -87,7 +89,72 @@ export default function App() {
     const house = { x: 1, y: 1, w: 4, h: 3 };
     const shopB = { x: 6, y: 1, w: 4, h: 3 };
     const shopDoor = { x: 7, y: 3 };
-    const npc = { x: 8.5 * T, y: 5.5 * T, w: 20, h: 24 };
+    const npcs: NPC[] = [
+      {
+        id: "mara",
+        scene: "farm",
+        name: "Mara",
+        x: 8.5 * T,
+        y: 5.5 * T,
+        w: 20,
+        h: 24,
+        hat: "#7a3db8",
+        body: "#e8c39e",
+        lines: [
+          "Mine 10 stone to repair the bridge east of the pond.",
+          "Trees and rocks regrow each day, so gather a little every morning.",
+          "If slimes crowd you, bonk them with Space for quick gold.",
+        ],
+      },
+      {
+        id: "rowan",
+        scene: "forest",
+        name: "Rowan",
+        x: 4.5 * T,
+        y: 9.5 * T,
+        w: 20,
+        h: 24,
+        hat: "#2f6ea6",
+        body: "#dbb08d",
+        lines: [
+          "Welcome to the deep forest. The mine is southeast from here.",
+          "Big trees drop more wood than saplings back in the village.",
+          "If you're hurt, retreat to the farm and recover before the dragon.",
+        ],
+      },
+      {
+        id: "iris",
+        scene: "forest",
+        name: "Iris",
+        x: 16.5 * T,
+        y: 10.5 * T,
+        w: 20,
+        h: 24,
+        hat: "#b5427f",
+        body: "#e7bf9f",
+        lines: [
+          "The dragon's hall is down in the mine. Bring courage and healing snacks.",
+          "The dragon hits hard, but each strike you land weakens it for good.",
+          "Defeat it and you'll earn a hero's purse of gold.",
+        ],
+      },
+      {
+        id: "niko",
+        scene: "shop",
+        name: "Niko",
+        x: 9 * T,
+        y: 5.5 * T,
+        w: 26,
+        h: 32,
+        hat: "#6b3b9d",
+        body: "#cfa77b",
+        lines: [
+          "Need seeds? B buys carrot, N buys pumpkin.",
+          "Press S to sell crops and wood when your bags are full.",
+          "Donate lumber with D so the village keeps growing.",
+        ],
+      },
+    ];
 
     const trees = mkNodes([[11, 3], [12, 4], [14, 3], [15, 5], [17, 3], [18, 5], [10, 6], [13, 6]], 2);
     const rocks = mkNodes([[9, 10], [10, 10], [10, 11]], 2);
@@ -122,9 +189,20 @@ export default function App() {
       dragon: mkDragon(),
       shop: { carrot: 3, pumpkin: 5 },
       village: { wood: 0, goal: 20, level: 1 },
+      npcTalk: {},
     };
 
     const msg = (m: string) => (s.msg = m);
+    const talkTo = (npc: NPC) => {
+      const i = s.npcTalk[npc.id] || 0;
+      msg(`${npc.name}: ${npc.lines[i]}`);
+      s.npcTalk[npc.id] = (i + 1) % npc.lines.length;
+    };
+    const nearbyNpc = () => {
+      const p = s.p;
+      const reach = { x: p.x - 20, y: p.y - 20, w: p.w + 40, h: p.h + 40 };
+      return npcs.find((npc) => npc.scene === s.scene && overlap(reach, npc));
+    };
     const enter = (scene: Scene, x: number, y: number, dir: State["p"]["dir"], text: string) => {
       s.scene = scene;
       s.p.x = x;
@@ -233,11 +311,13 @@ export default function App() {
       const p = s.p;
       const { tx, ty } = facing();
       const k = tileKey(tx, ty);
+      const npc = nearbyNpc();
+
+      if (npc) return talkTo(npc);
 
       if (s.scene === "shop") return msg("Shop: B buy carrot seed, N buy pumpkin seed, S sell goods, D donate wood, E leave.");
 
       if (s.scene === "farm") {
-        if (overlap({ x: p.x - 18, y: p.y - 18, w: p.w + 36, h: p.h + 36 }, npc)) return msg("Mara: Mine 10 stone, repair the bridge, then head east into the deep forest.");
         const c = tileAt(p.x + p.w / 2, p.y + p.h / 2);
         if (c.tx === shopDoor.x && c.ty === shopDoor.y + 1) return enter("shop", 9 * T, 9 * T, "down", "Inside the shop. B buy carrot, N buy pumpkin, S sell, D donate wood, E leave.");
         if (!s.bridge && tx === bridge.x && ty === bridge.y) {
@@ -393,6 +473,15 @@ export default function App() {
       });
     };
 
+    const drawNpcs = () => {
+      npcs.forEach((npc) => {
+        if (npc.scene !== s.scene) return;
+        drawRect(npc.x, npc.y, npc.w, npc.h, npc.body);
+        drawRect(npc.x, npc.y, npc.w, 8, npc.hat);
+        label("!", npc.x + npc.w / 2 - 3, npc.y - 4, 11);
+      });
+    };
+
     const drawFarm = () => {
       const g = Math.floor(105 + (Math.sin((s.time / 20) * Math.PI * 2) * 0.5 + 0.5) * 30);
       drawRect(0, 0, W, H, `rgb(70,${g},70)`);
@@ -425,9 +514,7 @@ export default function App() {
         if (pl.planted && !pl.ready) drawRect(x * T + 11, y * T + 11, 10, 12, pl.cropType === "carrot" ? (pl.growth >= 1 ? "#6bcf5d" : "#57b847") : (pl.growth >= 1 ? "#97b84a" : "#7aa33a"));
         if (pl.ready) circ(x * T + 16, y * T + 15, 8, pl.cropType === "carrot" ? "#f0c419" : "#ff8c42");
       });
-      drawRect(npc.x, npc.y, npc.w, npc.h, "#e8c39e");
-      drawRect(npc.x, npc.y, npc.w, 8, "#7a3db8");
-      label("!", npc.x + 7, npc.y - 4, 11);
+      drawNpcs();
       s.slimes.forEach((e) => e.alive && ell(e.x + 11, e.y + 10, 11, 8, "#77dd77"));
     };
 
@@ -442,6 +529,7 @@ export default function App() {
       drawRect(mine.x * T + 3, mine.y * T + 3, T - 6, T - 6, "rgba(140,115,190,0.95)");
       drawRect(mine.x * T + 6, mine.y * T + 6, T - 12, T - 12, "#222");
       label("M", mine.x * T + 10, mine.y * T + 18, 10);
+      drawNpcs();
       s.forestSlimes.forEach((e) => e.alive && ell(e.x + 12, e.y + 10, 12, 9, "#dd6666"));
     };
 
@@ -513,8 +601,7 @@ export default function App() {
       label("Pumpkin seeds - N - 5g", 12.2 * T, 5.7 * T, 14);
       label("Sell crops + wood - S", 7.7 * T, 9.2 * T, 14);
       label("Donate wood - D", 8.1 * T, 10.1 * T, 14);
-      drawRect(9 * T, 5.5 * T, 26, 32, "#cfa77b");
-      drawRect(9 * T, 5.5 * T, 26, 10, "#6b3b9d");
+      drawNpcs();
       label("Shopkeeper", 8.3 * T, 5.1 * T, 14);
     };
 
