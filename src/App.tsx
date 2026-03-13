@@ -150,6 +150,10 @@ export default function App() {
       const touch = (t: { tx: number; ty: number }) => Math.abs(t.tx - target.x) <= pad && Math.abs(t.ty - target.y) <= pad;
       return touch(here) || touch(front);
     };
+    const onTile = (target: { x: number; y: number }) => {
+      const here = playerTile();
+      return here.tx === target.x && here.ty === target.y;
+    };
 
     const isBlocked = (x: number, y: number) => {
       const { tx, ty } = tileAt(x, y);
@@ -408,7 +412,11 @@ export default function App() {
       if (s.village.level >= 2) { drawRect(11 * T, 1 * T, 3 * T, 2 * T, "#8a5a36"); label("SHED", 11.7 * T, 1.7 * T); }
       if (s.village.level >= 3) { drawRect(15 * T, 1 * T, 3 * T, 2 * T, "#9a6a42"); label("HOME", 15.6 * T, 1.7 * T); }
       if (s.village.level >= 4) { drawRect(11 * T, 4 * T, 2 * T, 2 * T, "#6f8b4a"); label("PARK", 11.3 * T, 5.2 * T); }
-      if (s.bridge) { drawRect(eastGate.x * T + 8, eastGate.y * T + 8, 8, 16, "rgba(255,255,255,0.18)"); label(">", eastGate.x * T + 10, eastGate.y * T + 19, 10); }
+      if (s.bridge) {
+        drawRect(eastGate.x * T + 3, eastGate.y * T + 3, T - 6, T - 6, "rgba(217,210,160,0.95)");
+        drawRect(eastGate.x * T + 8, eastGate.y * T + 8, 8, 16, "rgba(255,255,255,0.18)");
+        label(">", eastGate.x * T + 10, eastGate.y * T + 20, 12, "#2c250f");
+      }
       drawNodes(trees, rocks, false);
       s.crops.forEach((pl, k) => {
         const [x, y] = k.split(",").map(Number);
@@ -431,7 +439,8 @@ export default function App() {
       drawRect(westGate.x * T, westGate.y * T + 10, T, 12, "#d9d2a0");
       label("<", westGate.x * T + 10, westGate.y * T + 19, 10);
       drawNodes(bigTrees, bigRocks, true);
-      drawRect(mine.x * T + 4, mine.y * T + 4, T - 8, T - 8, "#222");
+      drawRect(mine.x * T + 3, mine.y * T + 3, T - 6, T - 6, "rgba(140,115,190,0.95)");
+      drawRect(mine.x * T + 6, mine.y * T + 6, T - 12, T - 12, "#222");
       label("M", mine.x * T + 10, mine.y * T + 18, 10);
       s.forestSlimes.forEach((e) => e.alive && ell(e.x + 12, e.y + 10, 12, 9, "#dd6666"));
     };
@@ -580,6 +589,11 @@ export default function App() {
         p.x = clamp(p.x + dx * p.speed * dt, 2 * T, W - 2 * T - p.w);
         p.y = clamp(p.y + dy * p.speed * dt, 3 * T, H - 2 * T - p.h);
       } else move(dx, dy, dt);
+
+      if (s.scene === "farm" && s.bridge && onTile(eastGate)) enter("forest", 1 * T, 10 * T, "right", "You step into the deep forest.");
+      if (s.scene === "forest" && onTile(westGate)) enter("farm", 18 * T, 10 * T, "left", "Back at the village edge.");
+      if (s.scene === "forest" && onTile(mine)) enter("dungeon", 2 * T, 11 * T, "right", "You descend into the dragon's hall.");
+      if (s.scene === "dungeon" && onTile(stairs)) enter("forest", 17 * T, 12 * T, "left", "You retreat to the deep forest.");
 
       if (s.scene === "farm") s.slimes.forEach((e) => updateEnemy(e, { minX: 10 * T, maxX: 18 * T, minY: 7 * T, maxY: 12 * T }, 4, "A slime bumped you.", dt));
       if (s.scene === "forest") s.forestSlimes.forEach((e) => updateEnemy(e, { minX: 5 * T, maxX: 18 * T, minY: 2 * T, maxY: 12 * T }, 7, "A forest slime slammed into you.", dt));
