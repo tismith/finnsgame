@@ -143,6 +143,13 @@ export default function App() {
       const cy = p.y + p.h / 2;
       return tileAt(cx + (p.dir === "right" ? T : p.dir === "left" ? -T : 0), cy + (p.dir === "down" ? T : p.dir === "up" ? -T : 0));
     };
+    const playerTile = () => tileAt(s.p.x + s.p.w / 2, s.p.y + s.p.h / 2);
+    const nearTile = (target: { x: number; y: number }, pad = 1) => {
+      const here = playerTile();
+      const front = facing();
+      const touch = (t: { tx: number; ty: number }) => Math.abs(t.tx - target.x) <= pad && Math.abs(t.ty - target.y) <= pad;
+      return touch(here) || touch(front);
+    };
 
     const isBlocked = (x: number, y: number) => {
       const { tx, ty } = tileAt(x, y);
@@ -232,16 +239,16 @@ export default function App() {
         if (!s.bridge && tx === bridge.x && ty === bridge.y) {
           return p.inv.stone >= 10 ? (p.inv.stone -= 10, s.bridge = true, msg("You repaired the bridge with stone. Keep heading east to reach the deep forest.")) : msg("The bridge is broken. Need 10 stone to repair.");
         }
-        if (s.bridge && tx === eastGate.x && ty === eastGate.y) return enter("forest", 1 * T, 10 * T, "right", "You step into the deep forest.");
+        if (s.bridge && nearTile(eastGate, 0)) return enter("forest", 1 * T, 10 * T, "right", "You step into the deep forest.");
       }
 
       if (s.scene === "forest") {
-        if (tx === westGate.x && ty === westGate.y) return enter("farm", 18 * T, 10 * T, "left", "Back at the village edge.");
-        if (tx === mine.x && ty === mine.y) return enter("dungeon", 2 * T, 11 * T, "right", "You descend into the dragon's hall.");
+        if (nearTile(westGate, 0)) return enter("farm", 18 * T, 10 * T, "left", "Back at the village edge.");
+        if (nearTile(mine, 0)) return enter("dungeon", 2 * T, 11 * T, "right", "You descend into the dragon's hall.");
       }
 
       if (s.scene === "dungeon") {
-        if (tx === stairs.x && ty === stairs.y) return enter("forest", 17 * T, 12 * T, "left", "You retreat to the deep forest.");
+        if (nearTile(stairs, 0)) return enter("forest", 17 * T, 12 * T, "left", "You retreat to the deep forest.");
         if (keys.has(" ") && s.dragon.alive && overlap({ x: p.x - 16, y: p.y - 16, w: p.w + 32, h: p.h + 32 }, s.dragon)) {
           s.dragon.hp -= 1;
           if (s.dragon.hp <= 0) {
